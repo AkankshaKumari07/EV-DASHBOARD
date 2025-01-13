@@ -24,7 +24,7 @@ export function Header({
         </h2>
         <div className="relative mr-8">
           <button
-            className="flex lg:text-lg md:text-lg text-sm justify-between w-[200px] bg-white border rounded-md px-4 py-2 text-left focus:outline-none focus:ring-2 focus:ring-gray-500"
+            className="flex lg:text-lg md:text-lg text-sm justify-between md:w-[200px] w-[100px] bg-white border rounded-md px-4 py-2 text-left focus:outline-none focus:ring-2 focus:ring-gray-500"
             onClick={() => setIsOpen(!isOpen)}
           >
             {selectedCounty || "Select County"}
