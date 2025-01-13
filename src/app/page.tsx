@@ -1,101 +1,149 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect, useState } from "react";
+import { Car, Battery, Zap, MapPin } from "lucide-react";
+import { processEvData } from "./utils/process-data";
+import { DashboardData, EVData } from "./types/data";
+import { StatCard } from "./components/stat-card";
+import { BarChartComponent } from "./components/bar-chart";
+import { DonutChart } from "./components/donut-chart";
+import { Header } from "./components/header";
+
+export default function Dashboard() {
+  const [data, setData] = useState<EVData[]>([]);
+  const [selectedCounty, setSelectedCounty] = useState("All Counties");
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(
+    null
+  );
+
+  useEffect(() => {
+    fetch(
+      "https://raw.githubusercontent.com/vedant-patil-mapup/analytics-dashboard-assessment/main/data-to-visualize/Electric_Vehicle_Population_Data.csv"
+    )
+      .then((response) => response.text())
+      .then((csvText) => {
+        // Parse CSV
+        const lines = csvText.split("\n");
+        const parsedData: EVData[] = lines.slice(1).map((line) => {
+          const values = line.split(",");
+          return {
+            vin: values[0],
+            county: values[1],
+            city: values[2],
+            state: values[3],
+            modelYear: parseInt(values[5]),
+            make: values[6],
+            model: values[7],
+            electricVehicleType: values[8],
+            cleanAlternativeFuelVehicleEligibility: values[9],
+            electricRange: parseInt(values[10]) || 0,
+            baseMSRP: parseInt(values[11]) || 0,
+            legislativeDistrict: values[12],
+            dolVehicleId: values[13],
+            vehicleLocation: values[14],
+            electricUtility: values[15],
+            censusTract: values[16],
+          };
+        });
+        setData(parsedData);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (data.length === 0) return; // Ensure data is loaded before processing
+
+    const processor = processEvData(data);
+
+    // Use unfiltered data if "All Counties" is selected
+    const filteredData =
+      selectedCounty === "All Counties"
+        ? data
+        : processor.filterByCounty(selectedCounty);
+
+    // Handle empty filtered data
+    if (filteredData.length === 0) {
+      setDashboardData({
+        totalVehicles: 0,
+        averageRange: 0,
+        countyData: [],
+        makeData: [],
+        typeData: [],
+        yearlyTrend: [],
+      });
+      return;
+    }
+
+    setDashboardData({
+      totalVehicles: filteredData.length,
+      averageRange: processor.getAverageRange(filteredData),
+      countyData: processor.getCountyDistribution(filteredData),
+      makeData: processor.getMakeDistribution(filteredData),
+      typeData: processor.getEvTypeDistribution(filteredData),
+      yearlyTrend: processor.getYearlyTrend(filteredData),
+    });
+  }, [data, selectedCounty]);
+
+  if (!dashboardData) return <div>Loading...</div>;
+
+  const counties = [...new Set(data.map((ev) => ev.county))].sort();
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div className="min-h-screen flex flex-col">
+      <Header
+        counties={counties}
+        selectedCounty={selectedCounty}
+        onCountyChange={setSelectedCounty}
+      />
+      <div className="flex-1 space-y-4 p-8">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <StatCard
+            title="Total EVs"
+            value={dashboardData.totalVehicles.toLocaleString()}
+            description="Total registered electric vehicles"
+            icon={<Car className="h-4 w-4 text-muted-foreground" />}
+          />
+          <StatCard
+            title="Average Range"
+            value={`${dashboardData.averageRange} mi`}
+            description="Average electric range"
+            icon={<Battery className="h-4 w-4 text-muted-foreground" />}
+          />
+          <StatCard
+            title="Top Make"
+            value={dashboardData.makeData[0]?.name || "N/A"}
+            description="Most common manufacturer"
+            icon={<Zap className="h-4 w-4 text-muted-foreground" />}
+          />
+          <StatCard
+            title="Top County"
+            value={dashboardData.countyData[0]?.name || "N/A"}
+            description="Highest EV concentration"
+            icon={<MapPin className="h-4 w-4 text-muted-foreground" />}
+          />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-8">
+          <BarChartComponent
+            data={dashboardData.makeData}
+            title="Vehicle Make Distribution"
+            description="Number of vehicles by manufacturer"
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
+          <DonutChart
+            data={dashboardData.typeData}
+            title="EV Type Distribution"
+            description="Distribution of BEV vs PHEV vehicles"
           />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
+          <BarChartComponent
+            data={dashboardData.yearlyTrend}
+            title="Yearly Trend"
+            description="Number of EVs by model year"
           />
-          Go to nextjs.org →
-        </a>
-      </footer>
+          <BarChartComponent
+            data={dashboardData.countyData}
+            title="County Distribution"
+            description="Number of EVs by county"
+          />
+        </div>
+      </div>
     </div>
   );
 }
