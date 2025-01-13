@@ -11,12 +11,12 @@ export function StatCard({ title, value, description, icon }: StatCardProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        <CardTitle className="md:text-lg text-sm font-medium">{title}</CardTitle>
         {icon}
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-        <p className="text-xs text-muted-foreground">{description}</p>
+        <div className="md:text-3xl text-2xl font-bold mb-1">{value}</div>
+        <p className="text-sm text-muted-foreground">{description}</p>
       </CardContent>
     </Card>
   )

@@ -22,7 +22,6 @@ export default function Dashboard() {
     )
       .then((response) => response.text())
       .then((csvText) => {
-        // Parse CSV
         const lines = csvText.split("\n");
         const parsedData: EVData[] = lines.slice(1).map((line) => {
           const values = line.split(",");
@@ -50,17 +49,13 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    if (data.length === 0) return; // Ensure data is loaded before processing
-
+    if (data.length === 0) return;
     const processor = processEvData(data);
 
-    // Use unfiltered data if "All Counties" is selected
     const filteredData =
       selectedCounty === "All Counties"
         ? data
         : processor.filterByCounty(selectedCounty);
-
-    // Handle empty filtered data
     if (filteredData.length === 0) {
       setDashboardData({
         totalVehicles: 0,
